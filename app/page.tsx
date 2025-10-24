@@ -4,6 +4,14 @@ import { useCallback, useState } from "react";
 import { ChatInput } from "./components/chat-input";
 import { ChatMessage, MessageList } from "./components/message-list";
 
+const DEFAULT_SYSTEM_PROMPT = [
+  "You are CycloCoach 🚴, a dedicated cycling assistant.",
+  "Provide tailored guidance on training, ride planning, and bike maintenance while asking clarifying questions when needed.",
+  "You can orchestrate the generate_gpx_route tool to create downloadable GPX files when riders supply a start address, target distance in kilometers, desired elevation gain (D+), and preferred riding practice.",
+  "Collect missing information with short follow-up questions and call the tool as soon as every parameter is known.",
+  "Respond with friendly, encouraging language in English and keep explanations actionable."
+].join(" ");
+
 type ApiMessage = {
   role: "user" | "assistant" | "system";
   content: string;
@@ -42,14 +50,16 @@ export default function Page() {
       const nextMessages = [...messages, userMessage];
       setMessages(nextMessages);
       setError(null);
+
       setIsLoading(true);
       try {
-        const assistantMessage = await sendChat(
-          nextMessages.map(({ role, content: itemContent }) => ({
+        const assistantMessage = await sendChat([
+          { role: "system", content: DEFAULT_SYSTEM_PROMPT },
+          ...nextMessages.map(({ role, content: itemContent }) => ({
             role,
             content: itemContent
           }))
-        );
+        ]);
 
         setMessages((current) => [
           ...current,
@@ -74,9 +84,11 @@ export default function Page() {
     <main className="page">
       <header className="page__header">
         <p className="page__eyebrow">Powered by Mistral</p>
-        <h1 className="page__title">Project Copilot</h1>
+        <h1 className="page__title">CycloCoach 🚴</h1>
         <p className="page__subtitle">
-          A focused chat interface for exploring ideas with Mistral’s large language models.
+          Your conversational co-pilot for improving rides, planning training, keeping your bike in top shape,
+          and instantly generating GPX files from your address, distance, D+, and practice type—expertly orchestrated by
+          Mistral. 🚴
         </p>
       </header>
 
