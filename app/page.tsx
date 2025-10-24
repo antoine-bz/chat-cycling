@@ -3,6 +3,15 @@
 import { useCallback, useState } from "react";
 import { ChatInput } from "./components/chat-input";
 import { ChatMessage, MessageList } from "./components/message-list";
+import { buildGpxReply, parseGpxRequest } from "./lib/gpx";
+
+const DEFAULT_SYSTEM_PROMPT = [
+  "You are CycloCoach 🚴, a dedicated cycling assistant.",
+  "Provide tailored guidance on training, ride planning, and bike maintenance while asking clarifying questions when needed.",
+  "When a rider wants a GPX route, collect their start address, target distance in kilometers, desired elevation gain (D+), and preferred riding practice.",
+  "Once every parameter is available, instruct them to use the /gpx command in the format '/gpx address: …; distance: … km; elevation: … m; practice: …' so the interface can generate a downloadable file.",
+  "If any details are missing, ask focused follow-up questions before proceeding."
+].join(" ");
 
 type ApiMessage = {
   role: "user" | "assistant" | "system";
@@ -42,14 +51,31 @@ export default function Page() {
       const nextMessages = [...messages, userMessage];
       setMessages(nextMessages);
       setError(null);
+
+      const gpxRequest = parseGpxRequest(content);
+
+      if (gpxRequest) {
+        const { message } = buildGpxReply(gpxRequest);
+        setMessages((current) => [
+          ...current,
+          {
+            id: crypto.randomUUID(),
+            role: "assistant",
+            content: message
+          }
+        ]);
+        return;
+      }
+
       setIsLoading(true);
       try {
-        const assistantMessage = await sendChat(
-          nextMessages.map(({ role, content: itemContent }) => ({
+        const assistantMessage = await sendChat([
+          { role: "system", content: DEFAULT_SYSTEM_PROMPT },
+          ...nextMessages.map(({ role, content: itemContent }) => ({
             role,
             content: itemContent
           }))
-        );
+        ]);
 
         setMessages((current) => [
           ...current,
@@ -74,9 +100,10 @@ export default function Page() {
     <main className="page">
       <header className="page__header">
         <p className="page__eyebrow">Powered by Mistral</p>
-        <h1 className="page__title">Project Copilot</h1>
+        <h1 className="page__title">CycloCoach 🚴</h1>
         <p className="page__subtitle">
-          A focused chat interface for exploring ideas with Mistral’s large language models.
+          Your conversational co-pilot for improving rides, planning training, keeping your bike in top shape,
+          and instantly generating GPX files from your address, distance, D+, and practice type. 🚴
         </p>
       </header>
 
