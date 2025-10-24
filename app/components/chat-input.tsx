@@ -8,7 +8,7 @@ type ChatInputProps = {
 };
 
 export function ChatInput({ onSend, disabled }: ChatInputProps) {
-  const [value, setValue] = useState("");
+  const [value, setValue] = useState("Can you help me plan my next ride? 🚴");
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -24,7 +24,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
     <form onSubmit={handleSubmit} className="chat-form">
       <textarea
         className="chat-form__textarea"
-        placeholder="Ask a question…"
+        placeholder="Ask anything about cycling… 🚴"
         rows={2}
         value={value}
         onChange={(event) => setValue(event.target.value)}
