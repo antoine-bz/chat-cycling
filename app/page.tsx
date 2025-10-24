@@ -13,6 +13,9 @@ const DEFAULT_SYSTEM_PROMPT = [
   "If any details are missing, ask focused follow-up questions before proceeding."
 ].join(" ");
 
+const DEFAULT_SYSTEM_PROMPT =
+  "You are CycloCoach 🚴, a dedicated cycling assistant. Provide tailored guidance on training, ride planning, and bike maintenance while asking clarifying questions when needed.";
+
 type ApiMessage = {
   role: "user" | "assistant" | "system";
   content: string;
@@ -102,8 +105,8 @@ export default function Page() {
         <p className="page__eyebrow">Powered by Mistral</p>
         <h1 className="page__title">CycloCoach 🚴</h1>
         <p className="page__subtitle">
-          Your conversational co-pilot for improving rides, planning training, keeping your bike in top shape,
-          and instantly generating GPX files from your address, distance, D+, and practice type. 🚴
+          Your conversational co-pilot for improving your rides, planning training, and
+          keeping your bike in top shape. 🚴
         </p>
       </header>
 

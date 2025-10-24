@@ -30,7 +30,7 @@ export function MessageList({ messages, isLoading }: MessageListProps) {
   if (!messages.length) {
     return (
       <p className="message-list__empty">
-        Kick things off with a cycling question or try <code>/gpx address: Lyon, France; distance: 45 km; elevation: 750 m; practice: road</code> to generate a route. 🚴
+        Kick things off by asking your cycling questions. 🚴
       </p>
     );
   }
