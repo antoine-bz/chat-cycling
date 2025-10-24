@@ -20,6 +20,21 @@ type ChatCompletionResponse = {
   }>;
 };
 
+type AssistantDirective =
+  | { action: "msg"; content: string }
+  | { action: "gpx"; content: GpxInstruction };
+
+type GpxInstruction = {
+  parameters: Record<string, unknown>;
+  message?: string;
+};
+
+type ApiReply = {
+  role: "assistant";
+  action: "msg" | "gpx";
+  content: string;
+};
+
 type ChatRequest = {
   messages: Array<{
     role: "assistant" | "user" | "system";
@@ -123,6 +138,20 @@ export async function POST(request: Request) {
       );
     }
 
+    if (!reply.content) {
+      return NextResponse.json(
+        { error: "Mistral reply did not include content" },
+        { status: 502 }
+      );
+    }
+
+    const directive = parseAssistantDirective(reply.content);
+    if ("error" in directive) {
+      return NextResponse.json({ error: directive.error }, { status: 400 });
+    }
+
+    let gpxRequest: GpxRequest | null = null;
+
     if (reply.tool_calls?.length) {
       const toolCall = reply.tool_calls[0];
       if (toolCall.function.name !== "generate_gpx_route") {
@@ -142,23 +171,42 @@ export async function POST(request: Request) {
         );
       }
 
-      const gpxRequest = normalizeGpxArgs(parsedArgs);
-      if ("error" in gpxRequest) {
-        return NextResponse.json({ error: gpxRequest.error }, { status: 400 });
+      const normalizedFromTool = normalizeGpxArgs(parsedArgs);
+      if ("error" in normalizedFromTool) {
+        return NextResponse.json({ error: normalizedFromTool.error }, { status: 400 });
       }
 
-      const { message } = buildGpxReply(gpxRequest);
-      return NextResponse.json({ reply: { role: "assistant", content: message } });
+      gpxRequest = normalizedFromTool;
     }
 
-    if (!reply.content) {
+    if (directive.action === "gpx") {
+      const normalizedFromDirective = normalizeGpxArgs(directive.content.parameters);
+      if ("error" in normalizedFromDirective) {
+        return NextResponse.json({ error: normalizedFromDirective.error }, { status: 400 });
+      }
+
+      const finalRequest = gpxRequest ?? normalizedFromDirective;
+      const gpxReply = buildGpxResponseFromDirective(directive.content, finalRequest);
+      return NextResponse.json({ reply: gpxReply });
+    }
+
+    if (reply.tool_calls?.length) {
       return NextResponse.json(
-        { error: "Mistral reply did not include content" },
-        { status: 502 }
+        {
+          error:
+            "Received a tool call from Mistral but the directive action was not 'gpx'."
+        },
+        { status: 400 }
       );
     }
 
-    return NextResponse.json({ reply: { role: reply.role, content: reply.content } });
+    const messageReply: ApiReply = {
+      role: "assistant",
+      action: "msg",
+      content: directive.content
+    };
+
+    return NextResponse.json({ reply: messageReply });
   } catch (error) {
     return NextResponse.json(
       {
@@ -210,6 +258,108 @@ function normalizeGpxArgs(value: unknown): GpxRequest | { error: string } {
   };
 
   return request;
+}
+
+function parseAssistantDirective(content: string):
+  | AssistantDirective
+  | { error: string } {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(content);
+  } catch (error) {
+    return {
+      error:
+        "Mistral reply must be valid JSON with an action and content field."
+    };
+  }
+
+  if (!parsed || typeof parsed !== "object") {
+    return { error: "Assistant directive must be a JSON object." };
+  }
+
+  const { action, content: payload } = parsed as Record<string, unknown>;
+
+  if (action !== "msg" && action !== "gpx") {
+    return {
+      error: "Assistant directive action must be either 'msg' or 'gpx'."
+    };
+  }
+
+  if (action === "msg") {
+    if (typeof payload !== "string" || !payload.trim()) {
+      return {
+        error:
+          "Message directives require a non-empty string content describing the assistant reply."
+      };
+    }
+
+    return { action: "msg", content: payload };
+  }
+
+  const instruction = parseGpxInstruction(payload);
+  if ("error" in instruction) {
+    return { error: instruction.error };
+  }
+
+  return { action: "gpx", content: instruction };
+}
+
+function parseGpxInstruction(value: unknown): GpxInstruction | { error: string } {
+  if (!value) {
+    return {
+      error:
+        "GPX directives require content with the ride parameters for the GPX generation."
+    };
+  }
+
+  if (typeof value === "string") {
+    try {
+      return parseGpxInstruction(JSON.parse(value));
+    } catch (error) {
+      return {
+        error:
+          "GPX directive content must be an object or a JSON string that decodes to one."
+      };
+    }
+  }
+
+  if (typeof value !== "object") {
+    return {
+      error: "GPX directive content must be an object with ride parameters."
+    };
+  }
+
+  const payload = value as Record<string, unknown>;
+
+  const parametersValue =
+    typeof payload.parameters === "object" && payload.parameters !== null
+      ? payload.parameters
+      : value;
+
+  const message =
+    typeof payload.message === "string" && payload.message.trim()
+      ? payload.message.trim()
+      : undefined;
+
+  return {
+    parameters: parametersValue as Record<string, unknown>,
+    message
+  };
+}
+
+function buildGpxResponseFromDirective(
+  instruction: GpxInstruction,
+  request: GpxRequest
+): ApiReply {
+  const { message: preface } = instruction;
+  const { message: gpxMessage } = buildGpxReply(request);
+  const content = preface ? `${preface}\n\n${gpxMessage}` : gpxMessage;
+
+  return {
+    role: "assistant",
+    action: "gpx",
+    content
+  };
 }
 
 function coerceNumber(value: unknown): number | null {

@@ -17,7 +17,8 @@ const markdownComponents: Components = {
 
 export type ChatMessage = {
   id: string;
-  role: "user" | "assistant" | "system";
+  role: "user" | "assistant";
+  action: "msg" | "gpx";
   content: string;
 };
 
@@ -41,11 +42,16 @@ export function MessageList({ messages, isLoading }: MessageListProps) {
         <Fragment key={message.id}>
           <article
             className={clsx("message", {
-              "message--user": message.role === "user"
+              "message--user": message.role === "user",
+              "message--gpx": message.role === "assistant" && message.action === "gpx"
             })}
           >
             <header className="message__role">
-              {message.role === "assistant" ? "CycloCoach 🚴" : "You"}
+              {message.role === "assistant"
+                ? message.action === "gpx"
+                  ? "CycloCoach 🚴 · GPX"
+                  : "CycloCoach 🚴"
+                : "You"}
             </header>
             <div className="message__content">
               <ReactMarkdown components={markdownComponents}>

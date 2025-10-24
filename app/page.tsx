@@ -9,6 +9,9 @@ const DEFAULT_SYSTEM_PROMPT = [
   "Provide tailored guidance on training, ride planning, and bike maintenance while asking clarifying questions when needed.",
   "You can orchestrate the generate_gpx_route tool to create downloadable GPX files when riders supply a start address, target distance in kilometers, desired elevation gain (D+), and preferred riding practice.",
   "Collect missing information with short follow-up questions and call the tool as soon as every parameter is known.",
+  "Always respond with a single JSON object: {\"action\":\"msg\"|\"gpx\",\"content\":...} with no additional text.",
+  "For action \"msg\", set content to the Markdown message you want to show the rider.",
+  "For action \"gpx\", set content.parameters to {start_address, distance_km, elevation_gain_m, practice_type} and optionally include content.message to preface the GPX results, then call generate_gpx_route with the same values.",
   "Respond with friendly, encouraging language in English and keep explanations actionable."
 ].join(" ");
 
@@ -17,7 +20,13 @@ type ApiMessage = {
   content: string;
 };
 
-async function sendChat(messages: ApiMessage[]): Promise<ApiMessage> {
+type ApiReply = {
+  role: "assistant";
+  action: "msg" | "gpx";
+  content: string;
+};
+
+async function sendChat(messages: ApiMessage[]): Promise<ApiReply> {
   const response = await fetch("/api/chat", {
     method: "POST",
     headers: {
@@ -31,7 +40,7 @@ async function sendChat(messages: ApiMessage[]): Promise<ApiMessage> {
     throw new Error(error?.error ?? "Failed to reach the chat service");
   }
 
-  const data = (await response.json()) as { reply: ApiMessage };
+  const data = (await response.json()) as { reply: ApiReply };
   return data.reply;
 }
 
@@ -45,6 +54,7 @@ export default function Page() {
       const userMessage: ChatMessage = {
         id: crypto.randomUUID(),
         role: "user",
+        action: "msg",
         content
       };
       const nextMessages = [...messages, userMessage];
@@ -66,6 +76,7 @@ export default function Page() {
           {
             id: crypto.randomUUID(),
             role: assistantMessage.role,
+            action: assistantMessage.action,
             content: assistantMessage.content
           }
         ]);
