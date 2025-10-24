@@ -35,15 +35,23 @@ type ApiReply = {
   content: string;
 };
 
+type ChatMessage = {
+  role: "assistant" | "user" | "system";
+  content: string;
+};
+
 type ChatRequest = {
-  messages: Array<{
-    role: "assistant" | "user" | "system";
-    content: string;
-  }>;
+  messages: ChatMessage[];
 };
 
 const MISTRAL_ENDPOINT = "https://api.mistral.ai/v1/chat/completions";
 const DEFAULT_MODEL = "mistral-small-latest";
+
+const JSON_RESPONSE_DIRECTIVE: ChatMessage = {
+  role: "system",
+  content:
+    "You must respond with exactly one JSON object. Use {\"action\":\"msg\",\"content\":\"...\"} for normal replies and {\"action\":\"gpx\",\"content\":{\"parameters\":{start_address,distance_km,elevation_gain_m,practice_type},\"message\":\"...\"}} when providing GPX results. Do not add any commentary before or after the JSON."
+};
 
 const GPX_TOOL = {
   type: "function",
@@ -101,6 +109,11 @@ export async function POST(request: Request) {
   }
 
   try {
+    const upstreamMessages: ChatMessage[] = [
+      JSON_RESPONSE_DIRECTIVE,
+      ...body.messages
+    ];
+
     const mistralResponse = await fetch(MISTRAL_ENDPOINT, {
       method: "POST",
       headers: {
@@ -109,7 +122,7 @@ export async function POST(request: Request) {
       },
       body: JSON.stringify({
         model: DEFAULT_MODEL,
-        messages: body.messages,
+        messages: upstreamMessages,
         tools: [GPX_TOOL],
         tool_choice: "auto"
       })
