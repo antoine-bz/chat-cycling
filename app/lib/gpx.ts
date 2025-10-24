@@ -121,25 +121,39 @@ export function parseGpxRequest(rawMessage: string): GpxRequest | null {
 }
 
 export function buildGpxReply(request: GpxRequest): { message: string } {
-  const points = createTrackPoints(request);
-  const gpx = buildGpxDocument(request, points);
-  const dataUri = `data:application/gpx+xml;charset=utf-8,${encodeURIComponent(gpx)}`;
-
   const estimatedHours = request.distanceKm / estimateAverageSpeed(request.practiceType);
   const formattedDuration = formatDuration(estimatedHours);
+  const filename = buildGpxFilename(request);
+  const params = new URLSearchParams({
+    address: request.address,
+    distanceKm: request.distanceKm.toString(),
+    elevationGain: request.elevationGain.toString(),
+    practiceType: request.practiceType
+  });
+  const downloadUrl = `/api/gpx?${params.toString()}`;
 
   const message = [
     `Here is a **${formatPracticeLabel(request.practiceType)}** route starting from **${request.address}**.`,
     `- Distance: ${request.distanceKm.toFixed(1)} km`,
     `- Elevation gain: ${Math.round(request.elevationGain)} m`,
     formattedDuration ? `- Estimated moving time: ${formattedDuration}` : null,
-    `[⬇️ Download the GPX file](${dataUri} "Download GPX track")`,
+    `[⬇️ Download the GPX file](${downloadUrl} "Download ${filename}")`,
     "Import this GPX into your preferred navigation app and enjoy the ride!"
   ]
     .filter(Boolean)
     .join("\n\n");
 
   return { message };
+}
+
+export function createGpxFile(request: GpxRequest): { filename: string; content: string } {
+  const points = createTrackPoints(request);
+  const content = buildGpxDocument(request, points);
+
+  return {
+    filename: buildGpxFilename(request),
+    content
+  };
 }
 
 type TrackPoint = {
@@ -180,6 +194,12 @@ function buildGpxDocument(request: GpxRequest, points: TrackPoint[]): string {
     "  </trk>\n" +
     "</gpx>\n"
   );
+}
+
+function buildGpxFilename(request: GpxRequest): string {
+  const practice = slugify(formatPracticeLabel(request.practiceType)) || "ride";
+  const roundedDistance = Math.max(1, Math.round(request.distanceKm));
+  return `cyclocoach-${practice}-${roundedDistance}km.gpx`;
 }
 
 function createTrackPoints(request: GpxRequest): TrackPoint[] {
@@ -352,4 +372,13 @@ function escapeXml(value: string): string {
         return char;
     }
   });
+}
+
+function slugify(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[^\p{Letter}\p{Number}]+/gu, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
 }
