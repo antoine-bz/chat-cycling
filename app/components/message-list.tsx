@@ -2,6 +2,7 @@
 
 import clsx from "clsx";
 import { Fragment } from "react";
+import ReactMarkdown from "react-markdown";
 
 export type ChatMessage = {
   id: string;
@@ -18,7 +19,7 @@ export function MessageList({ messages, isLoading }: MessageListProps) {
   if (!messages.length) {
     return (
       <p className="message-list__empty">
-        Start the conversation by asking anything about your project.
+        Kick things off by asking your cycling questions. 🚴
       </p>
     );
   }
@@ -33,13 +34,15 @@ export function MessageList({ messages, isLoading }: MessageListProps) {
             })}
           >
             <header className="message__role">
-              {message.role === "assistant" ? "Mistral" : "You"}
+              {message.role === "assistant" ? "CycloCoach 🚴" : "You"}
             </header>
-            <p className="message__content">{message.content}</p>
+            <div className="message__content">
+              <ReactMarkdown linkTarget="_blank">{message.content}</ReactMarkdown>
+            </div>
           </article>
         </Fragment>
       ))}
-      {isLoading ? <div className="loading-indicator">Mistral is thinking…</div> : null}
+      {isLoading ? <div className="loading-indicator">CycloCoach 🚴 is thinking…</div> : null}
     </div>
   );
 }

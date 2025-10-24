@@ -4,6 +4,9 @@ import { useCallback, useState } from "react";
 import { ChatInput } from "./components/chat-input";
 import { ChatMessage, MessageList } from "./components/message-list";
 
+const DEFAULT_SYSTEM_PROMPT =
+  "You are CycloCoach 🚴, a dedicated cycling assistant. Provide tailored guidance on training, ride planning, and bike maintenance while asking clarifying questions when needed.";
+
 type ApiMessage = {
   role: "user" | "assistant" | "system";
   content: string;
@@ -44,12 +47,13 @@ export default function Page() {
       setError(null);
       setIsLoading(true);
       try {
-        const assistantMessage = await sendChat(
-          nextMessages.map(({ role, content: itemContent }) => ({
+        const assistantMessage = await sendChat([
+          { role: "system", content: DEFAULT_SYSTEM_PROMPT },
+          ...nextMessages.map(({ role, content: itemContent }) => ({
             role,
             content: itemContent
           }))
-        );
+        ]);
 
         setMessages((current) => [
           ...current,
@@ -74,9 +78,10 @@ export default function Page() {
     <main className="page">
       <header className="page__header">
         <p className="page__eyebrow">Powered by Mistral</p>
-        <h1 className="page__title">Project Copilot</h1>
+        <h1 className="page__title">CycloCoach 🚴</h1>
         <p className="page__subtitle">
-          A focused chat interface for exploring ideas with Mistral’s large language models.
+          Your conversational co-pilot for improving your rides, planning training, and
+          keeping your bike in top shape. 🚴
         </p>
       </header>
 
