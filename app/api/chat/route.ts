@@ -151,21 +151,28 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!reply.content) {
-      return NextResponse.json(
-        { error: "Mistral reply did not include content" },
-        { status: 502 }
-      );
+    const hasContent = typeof reply.content === "string" && reply.content.trim().length > 0;
+
+    const directiveResult = hasContent
+      ? parseAssistantDirective(reply.content as string)
+      : buildDirectiveFromToolCall(reply.tool_calls);
+
+    if ("error" in directiveResult) {
+      const status = hasContent ? 400 : 502;
+      return NextResponse.json({ error: directiveResult.error }, { status });
     }
 
-    const directive = parseAssistantDirective(reply.content);
-    if ("error" in directive) {
-      return NextResponse.json({ error: directive.error }, { status: 400 });
-    }
-
+    let directive: AssistantDirective;
     let gpxRequest: GpxRequest | null = null;
 
-    if (reply.tool_calls?.length) {
+    if ("directive" in directiveResult) {
+      directive = directiveResult.directive;
+      gpxRequest = directiveResult.gpxRequest;
+    } else {
+      directive = directiveResult;
+    }
+
+    if (reply.tool_calls?.length && !gpxRequest) {
       const toolCall = reply.tool_calls[0];
       if (toolCall.function.name !== "generate_gpx_route") {
         return NextResponse.json(
@@ -315,6 +322,49 @@ function parseAssistantDirective(content: string):
   }
 
   return { action: "gpx", content: instruction };
+}
+
+function buildDirectiveFromToolCall(
+  toolCalls: ToolCall[] | undefined
+):
+  | { directive: AssistantDirective; gpxRequest: GpxRequest }
+  | { error: string } {
+  if (!toolCalls?.length) {
+    return { error: "Mistral reply did not include content" };
+  }
+
+  const toolCall = toolCalls[0];
+  if (toolCall.function.name !== "generate_gpx_route") {
+    return {
+      error: `Unsupported tool call: ${toolCall.function.name}`
+    };
+  }
+
+  let parsedArgs: unknown;
+  try {
+    parsedArgs = JSON.parse(toolCall.function.arguments || "{}");
+  } catch (error) {
+    return { error: "Unable to parse tool call arguments" };
+  }
+
+  const normalized = normalizeGpxArgs(parsedArgs);
+  if ("error" in normalized) {
+    return normalized;
+  }
+
+  const directive: AssistantDirective = {
+    action: "gpx",
+    content: {
+      parameters: {
+        start_address: normalized.address,
+        distance_km: normalized.distanceKm,
+        elevation_gain_m: normalized.elevationGain,
+        practice_type: normalized.practiceType
+      }
+    }
+  };
+
+  return { directive, gpxRequest: normalized };
 }
 
 function parseGpxInstruction(value: unknown): GpxInstruction | { error: string } {
