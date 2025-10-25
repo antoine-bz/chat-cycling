@@ -4,16 +4,8 @@ import { useCallback, useState } from "react";
 import { ChatInput } from "./components/chat-input";
 import { ChatMessage, MessageList } from "./components/message-list";
 
-const DEFAULT_SYSTEM_PROMPT = [
-  "You are CycloCoach 🚴, a dedicated cycling assistant.",
-  "Provide tailored guidance on training, ride planning, and bike maintenance while asking clarifying questions when needed.",
-  "You can orchestrate the generate_gpx_route tool to create downloadable GPX files when riders supply a start address, target distance in kilometers, desired elevation gain (D+), and preferred riding practice.",
-  "Collect missing information with short follow-up questions and call the tool as soon as every parameter is known.",
-  "Always respond with exactly one JSON object and nothing else so the client can simply branch on action.",
-  "For regular replies use {\"action\":\"msg\",\"content\":\"...\"} where content holds the Markdown message for the rider.",
-  "For GPX generation use {\"action\":\"gpx\",\"content\":{\"parameters\":{start_address,distance_km,elevation_gain_m,practice_type},\"message\":\"...\"}} and invoke generate_gpx_route with the same parameters.",
-  "Never include commentary before or after the JSON output and keep the tone friendly, encouraging, and actionable in English."
-].join(" ");
+const DEFAULT_SYSTEM_PROMPT =
+  "You are CycloCoach 🚴, a dedicated cycling assistant. Provide tailored guidance on training, ride planning, and bike maintenance while asking clarifying questions when needed.";
 
 type ApiMessage = {
   role: "user" | "assistant" | "system";
@@ -97,9 +89,8 @@ export default function Page() {
         <p className="page__eyebrow">Powered by Mistral</p>
         <h1 className="page__title">CycloCoach 🚴</h1>
         <p className="page__subtitle">
-          Your conversational co-pilot for improving rides, planning training, keeping your bike in top shape,
-          and instantly generating GPX files from your address, distance, D+, and practice type—expertly orchestrated by
-          Mistral. 🚴
+          Your conversational co-pilot for improving your rides, planning training, and
+          keeping your bike in top shape. 🚴
         </p>
       </header>
 

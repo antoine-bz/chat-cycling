@@ -31,7 +31,7 @@ export function MessageList({ messages, isLoading }: MessageListProps) {
   if (!messages.length) {
     return (
       <p className="message-list__empty">
-        Kick things off with a cycling question or describe the ride you want—start point, kilometers, climbing, and practice—to let CycloCoach 🚴 craft a GPX for you.
+        Kick things off by asking your cycling questions. 🚴
       </p>
     );
   }
@@ -47,11 +47,7 @@ export function MessageList({ messages, isLoading }: MessageListProps) {
             })}
           >
             <header className="message__role">
-              {message.role === "assistant"
-                ? message.action === "gpx"
-                  ? "CycloCoach 🚴 · GPX"
-                  : "CycloCoach 🚴"
-                : "You"}
+              {message.role === "assistant" ? "CycloCoach 🚴" : "You"}
             </header>
             <div className="message__content">
               <ReactMarkdown components={markdownComponents}>

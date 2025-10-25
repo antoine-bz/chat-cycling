@@ -8,9 +8,7 @@ type ChatInputProps = {
 };
 
 export function ChatInput({ onSend, disabled }: ChatInputProps) {
-  const [value, setValue] = useState(
-    "Plan a 60 km road ride from Lyon with around 800 m of climbing 🚴"
-  );
+  const [value, setValue] = useState("Can you help me plan my next ride? 🚴");
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -26,7 +24,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
     <form onSubmit={handleSubmit} className="chat-form">
       <textarea
         className="chat-form__textarea"
-        placeholder="Ask anything about cycling or describe the route you want (start, distance, D+, practice) to get a GPX 🚴"
+        placeholder="Ask anything about cycling… 🚴"
         rows={2}
         value={value}
         onChange={(event) => setValue(event.target.value)}
