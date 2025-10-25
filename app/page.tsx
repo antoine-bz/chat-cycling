@@ -12,7 +12,13 @@ type ApiMessage = {
   content: string;
 };
 
-async function sendChat(messages: ApiMessage[]): Promise<ApiMessage> {
+type ApiReply = {
+  role: "assistant";
+  action: "msg" | "gpx";
+  content: string;
+};
+
+async function sendChat(messages: ApiMessage[]): Promise<ApiReply> {
   const response = await fetch("/api/chat", {
     method: "POST",
     headers: {
@@ -26,7 +32,7 @@ async function sendChat(messages: ApiMessage[]): Promise<ApiMessage> {
     throw new Error(error?.error ?? "Failed to reach the chat service");
   }
 
-  const data = (await response.json()) as { reply: ApiMessage };
+  const data = (await response.json()) as { reply: ApiReply };
   return data.reply;
 }
 
@@ -40,11 +46,13 @@ export default function Page() {
       const userMessage: ChatMessage = {
         id: crypto.randomUUID(),
         role: "user",
+        action: "msg",
         content
       };
       const nextMessages = [...messages, userMessage];
       setMessages(nextMessages);
       setError(null);
+
       setIsLoading(true);
       try {
         const assistantMessage = await sendChat([
@@ -60,6 +68,7 @@ export default function Page() {
           {
             id: crypto.randomUUID(),
             role: assistantMessage.role,
+            action: assistantMessage.action,
             content: assistantMessage.content
           }
         ]);
