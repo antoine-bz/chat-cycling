@@ -58,15 +58,25 @@ export async function POST(request: Request) {
 
     if (!mistralResponse.ok) {
       const errorPayload = await mistralResponse.json().catch(() => ({}));
-      return NextResponse.json(
-        {
-          error:
-            typeof errorPayload?.error === "string"
-              ? errorPayload.error
-              : `Mistral API returned status ${mistralResponse.status}`
-        },
-        { status: 502 }
-      );
+      const payloadError = errorPayload?.error;
+      let errorMessage: string;
+
+      if (typeof payloadError === "string") {
+        errorMessage = payloadError;
+      } else if (
+        payloadError &&
+        typeof payloadError === "object" &&
+        "message" in payloadError &&
+        typeof payloadError.message === "string"
+      ) {
+        errorMessage = payloadError.message;
+      } else {
+        errorMessage = `Mistral API returned status ${mistralResponse.status}`;
+      }
+
+      const status = mistralResponse.status === 429 ? 429 : 502;
+
+      return NextResponse.json({ error: errorMessage }, { status });
     }
 
     const completion = (await mistralResponse.json()) as ChatCompletionResponse;
