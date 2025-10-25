@@ -6,11 +6,20 @@ function parseNumberParam(
   value: string | null,
   { allowZero = false }: { allowZero?: boolean } = {}
 ): number | null {
-  if (!value) {
+  if (value === null) {
     return null;
   }
 
-  const parsed = Number.parseFloat(value);
+  const normalized = value.trim();
+  if (!normalized) {
+    return null;
+  }
+
+  if (!/^\d+(?:\.\d+)?$/.test(normalized)) {
+    return null;
+  }
+
+  const parsed = Number.parseFloat(normalized);
   if (!Number.isFinite(parsed) || parsed < 0 || (!allowZero && parsed === 0)) {
     return null;
   }
